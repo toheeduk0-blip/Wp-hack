@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Server Panel</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #16213e;
+            --secondary-color: #0f3460;
+            --accent-color: #e94560;
+            --text-color: #dcdcdc;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 20px;
+        }
+        #login-container {
+            background-color: var(--primary-color);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        #login-container h1 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
+            color: var(--text-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            background-color: var(--accent-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        .btn:hover:not(:disabled) {
+            background-color: #ff6384;
+        }
+        #error-message {
+            color: #ff6384;
+            margin-top: 15px;
+            height: 20px;
+        }
+        #app-container {
+            display: none;
+            background-color: var(--primary-color);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--secondary-color);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-button.active {
+            color: var(--accent-color);
+            border-bottom: 3px solid var(--accent-color);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        #keys-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .key-card {
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+        }
+        .key-card.expired {
+            border-left-color: #6c757d;
+            opacity: 0.7;
+        }
+        .key-card h3 { margin-top: 0; }
+        .key-card p {
+            word-wrap: break-word;
+            font-size: 14px;
+            margin: 8px 0;
+            flex-grow: 1;
+        }
+        .key-card .actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .actions button {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        .btn-delete { background-color: #dc3545; }
+        .btn-extend { background-color: #28a745; }
+        
+        #add-key-form, #guide-content {
+            background-color: var(--secondary-color);
+            padding: 25px;
+            border-radius: 8px;
+        }
+        
+        #guide-content h2, #guide-content h3 {
+            color: var(--accent-color);
+        }
+        .code-block-wrapper {
+            position: relative;
+            margin: 1em 0;
+        }
+        .code-block-wrapper pre {
+            background-color: #111;
+            padding: 15px;
+            padding-top: 45px; /* space for button */
+            border-radius: 5px;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #f0f0f0;
+            margin: 0;
+        }
+        .code-block-wrapper code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+        }
+        .copy-btn:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        .btn .btn-loader {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+             color: var(--accent-color);
+             margin: 0;
+        }
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+        .logout-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+        .status-message {
+            margin-top: 15px;
+            height: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Login Page -->
+        <div id="login-container">
+            <h1>🔒 Secure Panel Login</h1>
+            <p>This panel is for authorized users only.</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+                <p id="error-message"></p>
+            </form>
+        </div>
+
+        <!-- Main Application -->
+        <div id="app-container">
+            <div class="header">
+                 <h1>Dashboard</h1>
+                 <button id="logout-btn" class="btn logout-btn">Logout</button>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-button active" data-tab="manage">Manage Keys</button>
+                <button class="tab-button" data-tab="add">Add New Key</button>
+                <button class="tab-button" data-tab="guide">How to Use</button>
+            </div>
+
+            <!-- Manage Keys Tab -->
+            <div id="manage" class="tab-content active">
+                <div id="loader" class="loader" style="display: none;"></div>
+                <div id="keys-list"></div>
+            </div>
+
+            <!-- Add Key Tab -->
+            <div id="add" class="tab-content">
+                <form id="add-key-form">
+                    <h2>Create a New Access Key</h2>
+                    <div class="input-group">
+                        <label for="key-name">Key Label (e.g., "My Project Bot")</label>
+                        <input type="text" id="key-name" placeholder="A friendly name for your key" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="bot-token">Telegram Bot Token</label>
+                        <input type="password" id="bot-token" placeholder="Enter your bot token here" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="chat-id">Telegram Chat ID</label>
+                        <input type="text" id="chat-id" placeholder="Enter the destination chat ID" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="time-limit">Key Expiration</label>
+                         <select id="time-limit" required>
+                            <option value="1">1 Day</option>
+                            <option value="7">7 Days</option>
+                            <option value="15">15 Days</option>
+                            <option value="30" selected>1 Month</option>
+                            <option value="90">3 Months</option>
+                            <option value="365">1 Year</option>
+                         </select>
+                    </div>
+                    <button type="submit" id="add-key-btn" class="btn">
+                        <span class="btn-text">Generate Key</span>
+                        <div class="loader btn-loader" style="display: none;"></div>
+                    </button>
+                    <p id="add-key-status" class="status-message"></p>
+                </form>
+            </div>
+
+            <!-- Guide Tab -->
+            <div id="guide" class="tab-content">
+                <div id="guide-content">
+                    <h2>How to Use Your Access Keys</h2>
+                    <p>To send a message, make a <strong>POST</strong> request to your project's API endpoint. This endpoint securely handles your credentials.</p>
+                    
+                    <h3>API Endpoint URL</h3>
+                    <p>Your API endpoint is: <code><span id="api-url-placeholder"></span>/api/send</code><br>
+                    <small>This URL is generated automatically based on your current window location.</small></p>
+
+                    <h3>Request Body</h3>
+                    <p>Your POST request must be in JSON format and include:</p>
+                    <ul>
+                        <li><code>accessKey</code>: The key generated from this panel.</li>
+                        <li><code>message</code>: The text message you want to send.</li>
+                    </ul>
+                    
+                    <h4>JavaScript (Fetch API) Example:</h4>
+                    <div class="code-block-wrapper">
+                        <button class="btn copy-btn">Copy</button>
+                        <pre><code>
+const apiKey = 'YOUR_GENERATED_ACCESS_KEY';
+const messageText = 'Hello from my application!';
+const apiUrl = '<span class="api-url-js"></span>/api/send';
+
+fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        accessKey: apiKey,
+        message: messageText,
+    }),
+})
+.then(response => response.json())
+.then(data => console.log('Success:', data))
+.catch(error => console.error('Error:', error));
+                        </code></pre>
+                    </div>
+
+                    <h4>Python (requests) Example:</h4>
+                    <div class="code-block-wrapper">
+                        <button class="btn copy-btn">Copy</button>
+                        <pre><code>
+import requests
+import json
+
+api_key = "YOUR_GENERATED_ACCESS_KEY"
+message_text = "Hello from my Python script!"
+api_url = "<span class="api-url-python"></span>/api/send"
+
+payload = { "accessKey": api_key, "message": message_text }
+
+try:
+    response = requests.post(api_url, json=payload)
+    response.raise_for_status()
+    print("Success:", response.json())
+except requests.exceptions.RequestException as e:
+    print("Error:", e)
+                        </code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const CORRECT_USER_B64 = 'c2dtb2RkZXI=';
+        const CORRECT_PASS_B64 = 'a3V0dGE3NjIw';
+        
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+        const logoutBtn = document.getElementById('logout-btn');
+        const tabs = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const keysList = document.getElementById('keys-list');
+        const loader = document.getElementById('loader');
+        const addKeyForm = document.getElementById('add-key-form');
+        const addKeyBtn = document.getElementById('add-key-btn');
+        const addKeyStatus = document.getElementById('add-key-status');
+        const API_BASE_URL = '/api/keys';
+
+        const showStatusMessage = (element, message, isError = false) => {
+            element.textContent = message;
+            element.style.color = isError ? 'var(--accent-color)' : '#28a745';
+            setTimeout(() => element.textContent = '', 5000);
+        };
+
+        const toggleButtonLoading = (button, isLoading, originalText = 'Submit') => {
+            const btnText = button.querySelector('.btn-text') || button;
+            const btnLoader = button.querySelector('.btn-loader');
+            button.disabled = isLoading;
+            if (isLoading) {
+                if (btnText) btnText.style.display = 'none';
+                if (btnLoader) btnLoader.style.display = 'block';
+            } else {
+                if (btnText) btnText.style.display = 'inline';
+                if (btnLoader) btnLoader.style.display = 'none';
+                if(btnText) btnText.textContent = originalText;
+            }
+        };
+        
+        const checkLogin = () => {
+            if (sessionStorage.getItem('isLoggedIn') === 'true') showApp();
+            else showLogin();
+        };
+
+        const showLogin = () => {
+            loginContainer.style.display = 'block';
+            appContainer.style.display = 'none';
+        };
+        
+        const showApp = () => {
+            loginContainer.style.display = 'none';
+            appContainer.style.display = 'block';
+            const apiUrl = window.location.origin;
+            document.getElementById('api-url-placeholder').textContent = apiUrl;
+            document.querySelectorAll('.api-url-js').forEach(el => el.textContent = apiUrl);
+            document.querySelectorAll('.api-url-python').forEach(el => el.textContent = apiUrl);
+            loadKeys();
+        };
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (btoa(username) === CORRECT_USER_B64 && btoa(pass) === CORRECT_PASS_B64) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                showApp();
+            } else {
+                errorMessage.textContent = 'Invalid username or password.';
+                setTimeout(() => errorMessage.textContent = '', 3000);
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('isLoggedIn');
+            showLogin();
+        });
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        const loadKeys = async () => {
+            loader.style.display = 'block';
+            keysList.innerHTML = '';
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+                const keys = await response.json();
+                renderKeys(keys);
+            } catch (error) {
+                keysList.innerHTML = `<p style="color: var(--accent-color);">Error: Could not load keys. The API might be down or an error occurred. (${error.message})</p>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        };
+        
+        const renderKeys = (keysData) => {
+            keysList.innerHTML = '';
+            if (!keysData || keysData.length === 0) {
+                keysList.innerHTML = '<p>No keys found. Add a new key to get started.</p>';
+                return;
+            }
+            keysData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            keysData.forEach(key => {
+                const now = new Date();
+                const expiryDate = new Date(key.expiresAt);
+                const isExpired = now > expiryDate;
+                const card = document.createElement('div');
+                card.className = `key-card ${isExpired ? 'expired' : ''}`;
+                card.innerHTML = `
+                    <h3>${key.name}</h3>
+                    <div>
+                        <p><strong>Access Key:</strong> ${key.accessKey}</p>
+                        <p><strong>Bot Token:</strong> ...${key.botToken.slice(-4)}</p>
+                        <p><strong>Chat ID:</strong> ${key.chatId}</p>
+                        <p><strong>Expires:</strong> ${expiryDate.toLocaleString()}</p>
+                        <p><strong>Status:</strong> <span style="color: ${isExpired ? '#ff6384' : '#28a745'}">${isExpired ? 'Expired' : 'Active'}</span></p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-extend" data-key="${key.accessKey}">Extend 30 Days</button>
+                        <button class="btn btn-delete" data-key="${key.accessKey}">Delete</button>
+                    </div>`;
+                keysList.appendChild(card);
+            });
+            
+            document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', (e) => handleDeleteKey(e.currentTarget.dataset.key, e.currentTarget)));
+            document.querySelectorAll('.btn-extend').forEach(btn => btn.addEventListener('click', (e) => handleExtendKey(e.currentTarget.dataset.key, e.currentTarget)));
+        };
+        
+        addKeyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newKeyData = {
+                name: document.getElementById('key-name').value.trim(),
+                botToken: document.getElementById('bot-token').value.trim(),
+                chatId: document.getElementById('chat-id').value.trim(),
+                days: parseInt(document.getElementById('time-limit').value, 10),
+            };
+            if (!newKeyData.name || !newKeyData.botToken || !newKeyData.chatId || !newKeyData.days) {
+                showStatusMessage(addKeyStatus, 'Please fill all fields.', true);
+                return;
+            }
+            toggleButtonLoading(addKeyBtn, true, 'Generate Key');
+            try {
+                const response = await fetch(API_BASE_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newKeyData) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Failed to create key.');
+                showStatusMessage(addKeyStatus, `Success! Key created.`);
+                addKeyForm.reset();
+                loadKeys();
+            } catch (error) {
+                showStatusMessage(addKeyStatus, `Error: ${error.message}`, true);
+            } finally {
+                toggleButtonLoading(addKeyBtn, false, 'Generate Key');
+            }
+        });
+
+        const handleKeyAction = async (url, method, body, button, successCallback) => {
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = '...';
+            try {
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) options.body = JSON.stringify(body);
+                const response = await fetch(url, options);
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Action failed.');
+                successCallback();
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        };
+
+        const handleDeleteKey = (accessKey, button) => {
+            if (!confirm(`Are you sure you want to delete the key "${accessKey}"?`)) return;
+            handleKeyAction(`${API_BASE_URL}?key=${accessKey}`, 'DELETE', null, button, () => {
+                button.closest('.key-card').remove();
+            });
+        };
+
+        const handleExtendKey = (accessKey, button) => {
+            handleKeyAction(API_BASE_URL, 'PUT', { accessKey }, button, () => loadKeys());
+        };
+
+        // --- COPY BUTTON LOGIC ---
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const pre = button.parentElement.querySelector('pre');
+                const code = pre.querySelector('code');
+                navigator.clipboard.writeText(code.innerText).then(() => {
+                    button.textContent = 'Copied!';
+                    setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+                }, (err) => {
+                    alert('Failed to copy text: ', err);
+                });
+            });
+        });
+
+        checkLogin();
+    });
+    </script>
+</body>
+</html>
